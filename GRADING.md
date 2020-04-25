@@ -1,3 +1,55 @@
+# Week 2
+
+| Part           | Comments    | Points |
+|----------------|-------------|--------|
+| provided tests | All passed  |     65 |
+| extras         | 3 failures  |      6 |
+| Coding         |             |     23 |
+| **TOTAL**      |             |     84 |
+
+Test failures:  (in my torture tests)
+
+- `if (0) { 99 }` has no else clause. The interpreter assumes all
+  if statements do, and so I get
+
+  ~~~
+  src/visitors/interpreter.js:46
+
+   45:     }else{
+   46:         return rest.accept(this);
+   47:     }
+
+  Error thrown in test:
+
+  TypeError {
+    message: 'rest.accept is not a function',
+  }
+  ~~~
+
+  I suggest changing grammar.pegjs to
+
+  ~~~ js
+  / condition:expr ifPart:brace_block
+    {return new AST.ifStatement(condition, ifPart, new Integer(0))}
+                                                   ^^^^^^^^^^^^^^
+   ~~~
+
+  returns `undefined` for `if 0 { 99 }`. It should either raise an error
+  or return 0.
+
+- your binding code does check for duplicate definitions of a variable
+  (two `let`s for the same variable), which is great. However, it
+  doesn't check for attempts to access a variable that hasn't been
+  defined.
+
+Code observations:
+
+- you need to be consistent in the naming of things. For example, some
+  of the AST class names start with an upper case letter, and others a
+  lower case letter.
+
+
+
 # Week 1
 
 | Part           | Comments    | Points |
