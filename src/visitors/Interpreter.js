@@ -1,19 +1,20 @@
+function bool(val)
+{
+  return val ? 1:0
+}
 const Operations = {
   "+": (l, r) => l + r,
   "-": (l, r) => l - r,
   "*": (l, r) => l * r,
   "/": (l, r) => Math.round(l / r),
-  "==": (l, r) => l == r,
-  "!=": (l, r) => l != r,
-  ">=": (l, r) => l >= r,
-  ">": (l, r) => l > r,
-  "<=": (l, r) => l <= r,
-  "<": (l, r) => l < r,
+  "==": (l, r) => bool(l == r),
+  "!=": (l, r) => bool(l != r),
+  ">=": (l, r) => bool(l >= r),
+  ">": (l, r) => bool(l > r),
+  "<=": (l, r) => bool(l <= r),
+  "<": (l, r) => bool(l < r),
 }
-
-
 export default class Interpreter {
-
   constructor(target, printFunction) {
     this.target = target
     this.printFunction = printFunction
@@ -27,14 +28,6 @@ export default class Interpreter {
   BinOp(node) {
     let l = node.left.accept(this)
     let r = node.right.accept(this)
-    if( Operations[node.op](l, r) == true)
-    {
-      return 1
-    }
-    if( Operations[node.op](l, r) == false)
-    {
-      return 0
-    }
     return  Operations[node.op](l, r)
   }
 
@@ -53,7 +46,7 @@ export default class Interpreter {
         return rest.accept(this);
     }
   }
-  visitCode(node)
+  Statements(node)
   {
     let temp = node.statements
     let num = 0
@@ -68,19 +61,33 @@ export default class Interpreter {
   }
   FunctionDef(node)
   {
-    return node.code
+    return node.list
   }
   FunctionCall(node)
   {
-    let bodyAST = node.name.accept(this)
-    return bodyAST.accept(this)
+    let name = node.params.accept(this)
+    return name.accept(this)
   }
   Assignment(node)
   {
     let variable = node.name.accept(this);
     let expr = node.expr.accept(this);
-    if(this.binding.has(variable))
+    if(this.binding.has(variable)){
         this.setVariable(variable, expr);
+    }
+    return expr;
+  }
+  VariableDecl(node)
+  {
+    let variable = node.name.accept(this);
+    let expr = node.expr.accept(this);
+    if(this.binding.has(variable)){
+        throw new Error(`already defined variable ${variable}`)
+    }
+    else
+    {
+      this.setVariable(variable, expr);
+    }
     return expr;
   }
   VariableName(node)
