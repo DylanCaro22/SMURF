@@ -68,7 +68,16 @@ export class Assignment {
       return visitor.Assignment(this)
   }
 }
+export class VariableDecl {
+  constructor(name, expr) {
+      this.name = name
+      this.expr = expr
+  }
 
+  accept(visitor) {
+      return visitor.VariableDecl(this)
+  }
+}
 export class funcDef {
   constructor(params, list){
       this.params = params
@@ -80,12 +89,23 @@ export class funcDef {
   }
 }
 
+export class FunctionCall {
+  constructor(params, list){
+      this.params = params
+      this.list = list
+  }
+
+  accept(visitor){
+      return visitor.FunctionCall(this)
+  }
+}
+
 export class Statements {
   constructor(statements){
       this.statements = statements
   }
 
   accept(visitor){
-      return visitor.visitCode(this)
+      return visitor.Statements(this)
   }
 }

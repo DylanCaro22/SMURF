@@ -23,18 +23,19 @@ code
   {return new AST.Statements(s)}
 
 statement
-  = "let" _ d:variable_declaration
+  = "let" _ d:variable_declaration _
   {return d}
-  / assignment
-  / expr
+  / assign:assignment _
+    {return assign}
+  / ex:expr
 
 //////////////// variables & variable declaration /////////////////////////////
 
 variable_declaration
   = v:variablename "=" e:expr
-    {return new AST.Assignment(v,e)}
+    {return new AST.VariableDecl(v,e)}
   / v:variablename
-    {return new AST.Assignment(v, new AST.IntegerValue(0))}
+    {return new AST.VariableDecl(v, new AST.IntegerValue(0))}
 
 variablevalue             // as rvalue
   = _ id:identifier _
@@ -47,7 +48,7 @@ variablename              // as lvalue
 //////////////////////////////// if/then/else /////////////////////////////
 
 if_expression
-  = condition:expr ifPart:brace_block "else" elsePart:brace_block
+  = condition:expr _ ifPart:brace_block _ "else" _ elsePart:brace_block
     {return new AST.ifStatement(condition, ifPart, elsePart)}
   / condition:expr ifPart:brace_block
     {return new AST.ifStatement(condition, ifPart, [])}
@@ -112,19 +113,20 @@ relop
 /////////////////////// utility NTs //////////////////////////////
 
 function_call
-  = variablevalue "(" ")"     // note: no parameters
+  = v:variablevalue  "(" ")" _    // note: no parameters
+    {return new AST.FunctionCall(v,[])}
 
 //////////////////////// function definition /////////////////////////////
 
 function_definition
-  = params:param_list code:brace_block
+  = _ params:param_list _ code:brace_block
   {return new AST.funcDef(params, code)}
 
 param_list
-   = "(" ")"
+   = _"(" _ ")" _
 
 brace_block
-  = _ "{" c:code "}" _
+  = "{" c:code "}" _
   {return c}
 
 _ "whitespace"
