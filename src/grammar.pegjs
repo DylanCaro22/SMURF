@@ -12,73 +12,80 @@
 start
   = code
 
-identifier       
-   = id:([a-z][a-zA-Z_0-9]*)
-    { return text() }
-
-///////////////////////// blocks (lists of statements) /////////////////////////
+///////////////////////// blocks (lists of staements) /////////////////////////
 
 code
-  = _ s:statement+ _
-  {return new AST.Statements(s)}
+  = stmts:statementWithOptionalLeadingSpaces* _
+    { return new AST.StatementList(stmts) }
+
+statementWithOptionalLeadingSpaces
+  = _ s:statement { return s }
 
 statement
-  = "let" _ d:variable_declaration _
-  {return d}
-  / assign:assignment _
-    {return assign}
-  / ex:expr
+  = "let" __ decl:variable_declaration
+    { return decl }
+  / assignment
+  / expr
 
-//////////////// variables & variable declaration /////////////////////////////
+//////////////////////////////// variables & variable declaration /////////////////////////////
 
 variable_declaration
-  = v:variablename "=" e:expr
-    {return new AST.VariableDecl(v,e)}
-  / v:variablename
-    {return new AST.VariableDecl(v, new AST.IntegerValue(0))}
+  = name:variable_name _ "=" _ expr:expr
+    { return new AST.VariableDeclaration(name, expr) }
+  / name:variable_name
+    { return new AST.VariableDeclaration(name, null) }
 
-variablevalue             // as rvalue
-  = _ id:identifier _
-      {return new AST.variablevalue(id)}
+variable_value                // as rvalue
+  =  id:identifier
+     { return new AST.VariableValue(id) }
 
-variablename              // as lvalue
-  = _ id:identifier _
-      {return new AST.variablename(id)}
+variable_name                 // as lvalue
+  =  id:identifier
+     { return new AST.VariableName(id) }
+
 
 //////////////////////////////// if/then/else /////////////////////////////
 
 if_expression
-  = condition:expr _ ifPart:brace_block _ "else" _ elsePart:brace_block
-    {return new AST.ifStatement(condition, ifPart, elsePart)}
-  / condition:expr ifPart:brace_block
-    {return new AST.ifStatement(condition, ifPart, [])}
+  = expr:expr _ thenCode:brace_block _ "else" _ elseCode:brace_block
+    {
+      return new AST.IfStatement(expr, thenCode, elseCode)
+    }
+  /  expr:expr _ thenCode:brace_block
+    {
+      return new AST.IfStatement(expr,
+                                 thenCode,
+                                 new AST.IntegerValue(0))
+    }
+
 
 //////////////////////////////// assignment /////////////////////////////
 
 assignment
-  = name:variablename _ "=" _ expr:expr
-    {return new AST.Assignment(name, expr)}
+  = l:variable_name _ "=" _ r:expr
+    { return new AST.Assignment(l, r) }
+
 
 //////////////////////////////// expression /////////////////////////////
 
 expr
-  = _ "fn" expr:function_definition 
-  {return expr}
-  / _ "if" expr:if_expression 
-  {return expr}
+  = "fn" _ fndef:function_definition
+    { return fndef }
+  / "if" _ ifExpr:if_expression
+    { return ifExpr }
   / boolean_expression
-  / arithmetic_expression
+  / arithmentic_expression
 
 
-/////////////////////// boolean expression /////////////////////////////
+//////////////////////////////// boolean expression /////////////////////////////
 
 boolean_expression
-  = head:arithmetic_expression rest:(relop arithmetic_expression)*
-    { return rollupBinOp(head, rest) }
+  = l:arithmentic_expression _ op:relop _ r:arithmentic_expression
+    { return new AST.BinOp(l, op, r) }
 
 //////////////////////////////// arithmetic expression /////////////////////////////
 
-arithmetic_expression
+arithmentic_expression
   = head:mult_term rest:(addop mult_term)*
     { return rollupBinOp(head, rest) }
 
@@ -88,9 +95,10 @@ mult_term
 
 primary
   = integer
-  /function_call
-  /variablevalue
-  / _ "(" _ expr:arithmetic_expression _ ")" _
+  / function_call
+  / _ v:variable_value _
+    { return v }
+  / _ "(" _ expr:arithmentic_expression _ ")" _
     { return expr }
 
 
@@ -110,28 +118,45 @@ relop
   = '==' / '!=' / '>=' / '>' / '<=' / '<'
 
 
-/////////////////////// utility NTs //////////////////////////////
+//////////////////////////////// function call /////////////////////////////
 
 function_call
-  = v:variablevalue  "(" ")" _    // note: no parameters
-    {return new AST.FunctionCall(v,[])}
+  = 'print' _ '(' _ args:call_arguments _ ')'
+    { return new AST.CustPrint(args) }
+  / name:variable_value "(" _ args:call_arguments _ ")"
+    { return new AST.FunctionCall(name, args) }
 
-//////////////////////// function definition /////////////////////////////
+call_arguments
+  = args: ((",")? _ expr)+
+    { return args }
+  / _ "" _
+    {return []}
+
+//////////////////////////////// function definition /////////////////////////////
 
 function_definition
-  = _ params:param_list _ code:brace_block
-  {return new AST.funcDef(params, code)}
+  = params:param_list _ code:brace_block
+    { return new AST.FunctionDefinition(params, code) }
 
 param_list
-   = _"(" _ ")" _
+   = "(" _ ")"
+   / "(" params: ((",")? _ variable_name )+ ")" 
+      { return params}
 
 brace_block
-  = "{" c:code "}" _
-  {return c}
+  = "{" _ code:code _ "}" { return code }
 
-_ "whitespace"
-  = [ \t\n\r]*
 
-digits            
-  = [-+]? [0-9]+
-   { return parseInt(text(), 10) }
+/////////////////////// utility NTs //////////////////////////////
+
+eol "end-of-line" = [\n\r\u2028\u2029]
+ws "whitespace"   = [ \t] / eol
+comment           = "#" (!eol .)*
+_                 = ( ws / comment )*
+__                = ( ws / comment )+
+
+identifier        = id:([a-z][a-zA-Z_0-9]*)
+                    { return text() }
+
+digits            = [-+]? [0-9]+
+                    { return parseInt(text(), 10) }
