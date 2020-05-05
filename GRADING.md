@@ -1,8 +1,39 @@
 # Week 3
 
-No code submitted
+| Part           | Comments    | Points |
+|----------------|-------------|--------|
+| provided tests | All passed  |     65 |
+| extras         | All passed  |     10 |  ** very nice **
+| Coding         |             |     21 |
+| Late submission|             |    -10 |
+| **TOTAL**      |             |     86 |
+
+Notes on the code:
+
+File: Interpreter.js
+48:   looper(params)
+49:   {
+50:     params.forEach((param, index) => {
+51:       params[index] = param[2].accept(this) //used to ignore extra characters that aren't neccesary
+52:     })
+53:   }
+
+This makes me feel dirty for two reasons. First, the AST should never
+contain "extra characters that aren't necessary". You need to make the
+grammar work in such a way that they are never added.
+
+Second, you're modifying the incoming data in the AST. If we have
+something else running against the same SMURF program, it would be hosed.
 
 
+File: Interpreter.js
+70:     while (this.binding.parent != null) {
+71:       this.binding = this.binding.pop()
+72:     }
+
+This seems wrong to me: you add just one binding to the set of bindings,
+but here you remove all but the top level. I'm guessing this would break
+given nested function calls.
 
 # Week 2
 
